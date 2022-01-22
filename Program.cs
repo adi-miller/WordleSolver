@@ -36,6 +36,21 @@ namespace WordleSolver
 
         public void Solve(int gameNum)
         {
+            Console.WriteLine(PatternMatch("?----", "abcde", "bcdea"));
+            Console.WriteLine(PatternMatch("-?---", "abcde", "bcdea"));
+            Console.WriteLine(PatternMatch("--?--", "abcde", "bcdea"));
+            Console.WriteLine(PatternMatch("---?-", "abcde", "bcdea"));
+            Console.WriteLine(PatternMatch("----?", "abcde", "bcdea"));
+            Console.WriteLine(PatternMatch("?-?-?", "abcde", "bcdea"));
+            Console.WriteLine(PatternMatch("?????", "abcde", "bcdea"));
+            Console.WriteLine(PatternMatch("????-", "abcde", "bcdef"));
+            Console.WriteLine(PatternMatch("?????", "abcde", "bcdef"));
+            Console.WriteLine(PatternMatch("-??--", "abcde", "xaaxx"));
+            Console.WriteLine(PatternMatch("--?--", "abcde", "xaaxx"));
+            Console.WriteLine(PatternMatch("-?---", "abcde", "xaaxx"));
+            Console.WriteLine(PatternMatch("?????", "abcde", "xaaxx"));
+            return;
+
             var patterns = GetPatternsFromTwitter(gameNum);
             var validWords = new List<string>();
             validWords.AddRange(words);
@@ -218,8 +233,8 @@ namespace WordleSolver
                             return false;
                         }
                         break;
-                    case '-': // Letter must NOT match
-                        if (candidate[i] == test[i])
+                    case '-': // Letter must NOT match and must not exist in candidate
+                        if (candidate.Contains(test[i]))
                         {
                             return false;
                         }
@@ -229,10 +244,12 @@ namespace WordleSolver
                         {
                             return false;
                         }
-                        if (!candidate.Contains(test[i]))
+                        var index = candidate.IndexOf(test[i]);
+                        if (index == -1)
                         {
                             return false;
                         }
+                        candidate = candidate.Remove(index, 1).Insert(index, "-");
                         break;
                 }
             }
