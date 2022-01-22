@@ -75,9 +75,9 @@ namespace WordleSolver
             }
 
             var userClient = new TwitterClient(
-                "GElfTtVcx5f1DVPgKsTz4MFoh", // Consumer Key
-                "QSrkZ6u9smAfC9d4KyaXBLkOuOH4p6DyzcD8ZgKKNI9mksZuA4", // Consumer Secret
-                "AAAAAAAAAAAAAAAAAAAAAA4hYQEAAAAAfsJrYryFiQgRWdbYTKS8p70Pths%3D9ldmJv9Fxth0HCd3TnVcuT0o2mNPVBa4Hjk6jslpBylUf4N5gQ" // Access Token
+                "<CONSUMER_KEY>", // Consumer Key
+                "<CONSUMER_SECRET>", // Consumer Secret
+                "<ACCESS_TOKEN>" // Access Token
                 // "ACCESS_TOKEN_SECRET" // Access Token Secret
             ); 
 
