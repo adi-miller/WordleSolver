@@ -75,9 +75,9 @@ namespace WordleSolver
             }
 
             var userClient = new TwitterClient(
-                "<CONSUMER_KEY>", // Consumer Key
-                "<CONSUMER_SECRET>", // Consumer Secret
-                "<ACCESS_TOKEN>" // Access Token
+                Secrets.ConsumerKey, // Consumer Key
+                Secrets.ConsumerSecret, // Consumer Secret
+                Secrets.AccessToken // Access Token
                 // "ACCESS_TOKEN_SECRET" // Access Token Secret
             ); 
 
