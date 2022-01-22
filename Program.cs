@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Tweetinvi;
 using Tweetinvi.Models;
-using Tweetinvi.Parameters;
 using System.Linq;
 
 namespace WordleSolver
@@ -12,11 +11,11 @@ namespace WordleSolver
     {
         static void Main(string[] args)
         {
-            var gameNum = 212;
-
+            var gameNum = 210;
             try { gameNum = int.Parse(args[0]); } catch(Exception) { }
 
             Console.WriteLine($"Hello Wordle {gameNum}!");
+
             var solver = new WordleSolver();
             solver.Solve(gameNum);
         }
@@ -24,8 +23,12 @@ namespace WordleSolver
 
     class WordleSolver
     {
+        const int frequencyThreshold = 5; // Recommended: 5. To avoid fake results and non-English tweets. 
+        const int scoreThreshold = 8; // Recommended: 8. Max score = 14 [e.g. +++?+]
+        const int expectedPatterns = 15; // Number of patterns above thresholds. 
         private string[] words { get; }
         private int compares = 0;
+
         public WordleSolver()
         {
             words = LoadWordList(@"sgb-words.txt");
@@ -39,7 +42,6 @@ namespace WordleSolver
             var toRemove = new List<string>();
             var iteration = 0;
             compares = 0;
-            var accumPatterns = new List<string>();
 
             foreach (var pattern in patterns)
             {
@@ -49,10 +51,6 @@ namespace WordleSolver
                     if (!TestCandidate(pattern.Key, words, candidateWord))
                     {
                         toRemove.Add(candidateWord);
-                        if (candidateWord == "prick")
-                        {
-                            Console.WriteLine($"Found answer.");
-                        }
                     }
                 }
                 foreach (var invalidWord in toRemove) 
@@ -60,18 +58,20 @@ namespace WordleSolver
                    validWords.Remove(invalidWord);
                 }
 
-                Console.WriteLine($"{++iteration}. Using pattern {pattern} excluded {toRemove.Count} words. Remaining word count: {validWords.Count}.");
+                Console.WriteLine($"\r{++iteration}. Using pattern {pattern} excluded {toRemove.Count} words. Remaining word count: {validWords.Count}.");
             }
 
-            Console.WriteLine($"\nDone.");
+            Console.WriteLine($"\n\nDone.");
             Console.WriteLine($"Number of compares: {compares:N0}.");
+            var remainingWords = validWords.Count > 20 ? "(Too many to list)" : string.Join(", ", validWords);
+            Console.WriteLine($"Remaining words: {remainingWords}");
         }
 
         private IEnumerable<(string Key, int Score, int Count)> GetPatternsFromTwitter(int index)
         {
-            static IEnumerable<(string Key, int Score, int Value)> ResultsSorter(Dictionary<string, int> patterns, int appearanceThreshold)
+            static IEnumerable<(string Key, int Score, int Value)> ResultsSorter(Dictionary<string, (int freq, int score)> patterns, int frequencyThreshold)
             {
-                return from p in patterns where p.Value > appearanceThreshold orderby PatternScore(p.Key) descending, p.Value descending select (p.Key, PatternScore(p.Key), p.Value);
+                return from p in patterns where p.Value.freq > frequencyThreshold orderby p.Value.score descending, p.Value descending select (p.Key, p.Value.score, p.Value.freq);
             }
 
             var userClient = new TwitterClient(
@@ -81,19 +81,19 @@ namespace WordleSolver
                 // "ACCESS_TOKEN_SECRET" // Access Token Secret
             ); 
 
-            var patterns = new Dictionary<string, int>();
-            var appearanceThreshold = 1;
-            var expectedPatterns = 120;
+            var patterns = new Dictionary<string, (int frequency, int score)>();
             var tweetCount = 0;
 
-            var res = userClient.Search.GetSearchTweetsIterator(new SearchTweetsParameters($"Wordle {index}"));
+            var res = userClient.Search.GetSearchTweetsIterator($"Wordle {index}");
             try
             {
+                int patternsFound = 0;
                 while (!res.Completed)
                 {
                     var page = res.NextPageAsync(); 
                     var tweets = new List<ITweet>();
                     tweets.AddRange(page.Result);
+                    Console.Write($"\rTweets processed: {tweetCount}. Still looking for {expectedPatterns-patternsFound} good patterns... ");
 
                     foreach (var tweet in tweets)
                     {
@@ -131,19 +131,25 @@ namespace WordleSolver
                                         var testPattern = pattern.Replace("+", "").Replace("-", "").Replace("?", "");
                                         if (testPattern == "")
                                         {
-                                            var appearanceCount = 0;
-                                            patterns.TryGetValue(pattern, out appearanceCount);
-                                            patterns[pattern] = appearanceCount + 1;
-                                            if (appearanceCount == appearanceThreshold)
+                                            var frequency = 0;
+                                            if (patterns.ContainsKey(pattern))
                                             {
-                                                expectedPatterns--;
-                                                if (expectedPatterns == 0)
+                                                frequency = patterns[pattern].frequency+1;
+                                            } else {
+                                                patterns[pattern] = (0, PatternScore(pattern));
+                                            }
+
+                                            patterns[pattern] = (frequency, patterns[pattern].score);
+
+                                            if (patterns[pattern].frequency == frequencyThreshold && patterns[pattern].score >= scoreThreshold)
+                                            {
+                                                patternsFound++;
+                                                if (patternsFound >= expectedPatterns)
                                                 {
-                                                  Console.WriteLine();
-                                                  return ResultsSorter(patterns, appearanceThreshold);
+                                                  Console.WriteLine($"\rTweets processed: {tweetCount}. Done. Found total of {patterns.Count} patterns.");
+                                                  return ResultsSorter(patterns, frequencyThreshold);
                                                 }
                                             }
-                                            Console.Write($"\rTweets processed: {tweetCount}. Still looking for {expectedPatterns} good patterns... ");
                                         }
                                     }
                                 } 
@@ -163,9 +169,8 @@ namespace WordleSolver
                 Console.WriteLine($"Error: {ex.Message}");
             }
             Console.WriteLine(" Couldn't satify the threshold.");
-            return ResultsSorter(patterns, appearanceThreshold);
-
-    }
+            return ResultsSorter(patterns, frequencyThreshold);
+        }
 
         private string[] LoadWordList(string Filename)
         {
@@ -236,6 +241,11 @@ namespace WordleSolver
 
         private bool TestCandidate(string pattern, string[] words, string candidate)
         {
+            if (compares % 1000 ==0)
+            {
+                Console.Write($"\rUsing pattern {pattern}. Testing {candidate}...");
+            }
+
             foreach (var testWord in words)
             {
                 if (candidate == testWord)
