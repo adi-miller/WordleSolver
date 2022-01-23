@@ -77,7 +77,7 @@ namespace WordleSolver
         {
             static IEnumerable<(string Key, int Score, int Value)> ResultsSorter(Dictionary<string, (int freq, int score)> patterns, int frequencyThreshold)
             {
-                return from p in patterns where p.Value.freq > frequencyThreshold orderby p.Value.score descending, p.Value descending select (p.Key, p.Value.score, p.Value.freq);
+                return from p in patterns where p.Value.freq >= frequencyThreshold orderby p.Value.score descending, p.Value descending select (p.Key, p.Value.score, p.Value.freq);
             }
 
             var userClient = new TwitterClient(
