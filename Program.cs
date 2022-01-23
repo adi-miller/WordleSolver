@@ -21,11 +21,11 @@ namespace WordleSolver
         }
     }
 
-    class WordleSolver
+    public class WordleSolver
     {
-        const int frequencyThreshold = 5; // Recommended: 5. To avoid fake results and non-English tweets. 
+        const int frequencyThreshold = 10; // Recommended: 5. To avoid fake results and non-English tweets. 
         const int scoreThreshold = 8; // Recommended: 8. Max score = 14 [e.g. +++?+]
-        const int expectedPatterns = 15; // Number of patterns above thresholds. 
+        const int expectedPatterns = 10; // Number of patterns above thresholds. 
         private string[] words { get; }
         private int compares = 0;
 
@@ -36,21 +36,6 @@ namespace WordleSolver
 
         public void Solve(int gameNum)
         {
-            Console.WriteLine(PatternMatch("?----", "abcde", "bcdea"));
-            Console.WriteLine(PatternMatch("-?---", "abcde", "bcdea"));
-            Console.WriteLine(PatternMatch("--?--", "abcde", "bcdea"));
-            Console.WriteLine(PatternMatch("---?-", "abcde", "bcdea"));
-            Console.WriteLine(PatternMatch("----?", "abcde", "bcdea"));
-            Console.WriteLine(PatternMatch("?-?-?", "abcde", "bcdea"));
-            Console.WriteLine(PatternMatch("?????", "abcde", "bcdea"));
-            Console.WriteLine(PatternMatch("????-", "abcde", "bcdef"));
-            Console.WriteLine(PatternMatch("?????", "abcde", "bcdef"));
-            Console.WriteLine(PatternMatch("-??--", "abcde", "xaaxx"));
-            Console.WriteLine(PatternMatch("--?--", "abcde", "xaaxx"));
-            Console.WriteLine(PatternMatch("-?---", "abcde", "xaaxx"));
-            Console.WriteLine(PatternMatch("?????", "abcde", "xaaxx"));
-            return;
-
             var patterns = GetPatternsFromTwitter(gameNum);
             var validWords = new List<string>();
             validWords.AddRange(words);
@@ -73,7 +58,13 @@ namespace WordleSolver
                    validWords.Remove(invalidWord);
                 }
 
-                Console.WriteLine($"\r{++iteration}. Using pattern {pattern} excluded {toRemove.Count} words. Remaining word count: {validWords.Count}.");
+                var remainingCount = validWords.Count;
+                Console.WriteLine($"\r{++iteration}. Using pattern {pattern} excluded {toRemove.Count} words. Remaining word count: {remainingCount}.");
+                if (remainingCount == 1)
+                {
+                    Console.WriteLine($"\nFound word: {validWords[0]}");
+                    break;
+                }
             }
 
             Console.WriteLine($"\n\nDone.");
@@ -143,27 +134,25 @@ namespace WordleSolver
                                     // Verify pattern is useful and valid
                                     if (pattern != "+++++" && pattern.Length == 5) 
                                     {
-                                        var testPattern = pattern.Replace("+", "").Replace("-", "").Replace("?", "");
-                                        if (testPattern == "")
+                                        var frequency = 0;
+                                        if (patterns.ContainsKey(pattern))
                                         {
-                                            var frequency = 0;
-                                            if (patterns.ContainsKey(pattern))
-                                            {
-                                                frequency = patterns[pattern].frequency+1;
-                                            } else {
-                                                patterns[pattern] = (0, PatternScore(pattern));
-                                            }
+                                            frequency = patterns[pattern].frequency+1;
+                                        } 
+                                        else 
+                                        {
+                                            patterns[pattern] = (0, PatternScore(pattern));
+                                        }
 
-                                            patterns[pattern] = (frequency, patterns[pattern].score);
+                                        patterns[pattern] = (frequency, patterns[pattern].score);
 
-                                            if (patterns[pattern].frequency == frequencyThreshold && patterns[pattern].score >= scoreThreshold)
+                                        if (patterns[pattern].frequency == frequencyThreshold && patterns[pattern].score >= scoreThreshold)
+                                        {
+                                            patternsFound++;
+                                            if (patternsFound >= expectedPatterns)
                                             {
-                                                patternsFound++;
-                                                if (patternsFound >= expectedPatterns)
-                                                {
-                                                  Console.WriteLine($"\rTweets processed: {tweetCount}. Done. Found total of {patterns.Count} patterns.");
-                                                  return ResultsSorter(patterns, frequencyThreshold);
-                                                }
+                                              Console.WriteLine($"\rTweets processed: {tweetCount}. Done. Found total of {patterns.Count} patterns.");
+                                              return ResultsSorter(patterns, frequencyThreshold);
                                             }
                                         }
                                     }
@@ -198,25 +187,28 @@ namespace WordleSolver
             var score = 0;
             for (int i = 0; i < 5; i++)
             {
-                if (pattern[i] == '+')
+                switch (pattern[i])
                 {
-                    score = score + 3;
+                    case '+':
+                        score += 3;
+                        break;
+                    case '?':
+                        score += 2;
+                        break;
+                    case '-':
+                        score -= 2;
+                        break;
+                    default:
+                        throw new Exception("Invalid pattern");
                 }
-                else if (pattern[i] == '?')
-                {
-                    score = score + 2;
-                }
-                else if (pattern[i] == '-')
-                {
-                    score = score - 2;
-                }
-
             }
             return score;
         }
 
         private bool PatternMatch(string pattern, string candidate, string test)
         {
+            // Console.Write($"Pattern: [{pattern}] - Candidate '{candidate}'. Test '{test}'. PatternMatch Result = ");
+
             if (pattern.Length != 5 || candidate.Length != 5 || test.Length != 5)
             {
                 throw new Exception("Invalid input");
