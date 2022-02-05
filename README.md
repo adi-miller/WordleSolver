@@ -25,7 +25,7 @@ The rational is that using enough posts, and given a known finite list of words 
 
 For example, the pattern 🟩⬜🟩🟩🟩 suggests that there is a word that is only different from the result word by the second letter. This means that using this pattern we can rule out that the Result word is `panic` because there is no other word in the dictionary that starts with `p` and ends with `nic`. 
 
-In addition, this pattern also tells us that the second letter in the Guess word doesn't exist in the Result word. This means that we can rule out the word `nival` from being the Result word, because the only word in the dictionary that matches it with a different 2nd letter is `naval`, but if `naval` was the Guess word, then the resulting pattern should have been 🟩🟨🟩🟩🟩.
+In addition, this pattern also tells us that the second letter in the Guess word doesn't exist in the Result word. This means that we can rule out the word `nival` from being the Result word, because the only word in the dictionary that matches it with a different 2nd letter is `naval`, but if `naval` was the Guess word, then the resulting pattern should have been 🟩🟨🟩🟩🟩 (which is not even a valid pattern).
 
 
 
